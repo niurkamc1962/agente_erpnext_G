@@ -7,9 +7,14 @@ from vector_store import obtener_o_crear_indice
 from config import Config
 
 # --- CONFIGURACIÓN GLOBAL DE LLAMA-INDEX ---
-# Esto asegura que todo el motor use Ollama localmente ademas se 
+# Esto asegura que todo el motor use Ollama localmente ademas se
 # puso la temperatura baja para que sea mas preciso y no alucine
-Settings.llm = Ollama(model=Config.MODEL, request_timeout=300.0, temperature=0.1)
+Settings.llm = Ollama(
+    model=Config.MODEL,
+    request_timeout=300.0,
+    temperature=0.1,  # <-- MUY IMPORTANTE: Mantenerlo entre 0.0 y 0.2
+    additional_kwargs={"top_p": 0.1},
+)
 
 # Definimos el modelo de embeddings (debe ser el mismo usado en ingest.py)
 Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
@@ -32,6 +37,7 @@ class ErpAgent:
             "4. Transforma la estructura técnica en pasos de navegación.\n"
             "   Ejemplo: 'Para crear un Banco, ve al módulo de Tesorería, haz clic en Nuevo Banco y rellena los siguientes campos...'\n"
             "5. Si no encuentras el proceso exacto, explica cómo crees que funciona basándote en los campos que ves en el sistema."
+            "RECORDATORIO FINAL: Habla ÚNICAMENTE de la interfaz de usuario. Si mencionas archivos .py o la carpeta /apps, fallarás en tu misión."
         )
 
         # 3. Configuramos el motor de chat en modo 'context'
