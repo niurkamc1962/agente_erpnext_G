@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "autoname": "format:{code}-{department}-{designation}-{salary_group}",
+ "creation": "2022-12-15 12:59:13.030185",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "code",
+  "designation",
+  "column_break_3",
+  "salary_group",
+  "department"
+ ],
+ "fields": [
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code",
+   "reqd": 1
+  },
+  {
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Designation",
+   "options": "Designation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "salary_group",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Salary Group",
+   "options": "Salary Group",
+   "reqd": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Department",
+   "options": "Department",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2022-12-15 15:11:14.948682",
+ "modified_by": "Administrator",
+ "module": "Cuba",
+ "name": "Job Position",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "restrict_to_domain": "HR Cuban Environment",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
