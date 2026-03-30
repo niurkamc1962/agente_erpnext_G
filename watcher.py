@@ -23,16 +23,22 @@ def iniciar_vigilancia():
     event_handler = ErpSourceHandler()
     observer = Observer()
 
-    # Programamos la vigilancia para ambas carpetas
-    observer.schedule(event_handler, str(Config.BENCH_PATH), recursive=True)
-    observer.schedule(event_handler, str(Config.DOCS_PATH), recursive=True)
+    # Solo programamos si las rutas existen
+    if Config.BENCH_PATH.exists():
+        observer.schedule(event_handler, str(Config.BENCH_PATH), recursive=True)
+    else:
+        print(f"⚠️ ADVERTENCIA: No se encontró la ruta de apps: {Config.BENCH_PATH}")
 
-    observer.start()
-    print(f"👀 Vigilando cambios en:\n - {Config.BENCH_PATH}\n - {Config.DOCS_PATH}")
+    if Config.DOCS_PATH.exists():
+        observer.schedule(event_handler, str(Config.DOCS_PATH), recursive=True)
+    else:
+        print(f"⚠️ ADVERTENCIA: No se encontró la ruta de docs: {Config.DOCS_PATH}")
 
+    # Solo iniciamos si hay algo que observar
     try:
+        observer.start()
+        print("👀 Vigilando cambios...")
         while True:
             time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
+    except Exception as e:
+        print(f"❌ Error al iniciar el observador: {e}")

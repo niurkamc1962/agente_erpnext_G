@@ -1,6 +1,4 @@
-# main.py
-
-from nicegui import ui, run
+from nicegui import app, ui, run
 from agent import ErpAgent
 from watcher import iniciar_vigilancia
 import threading
@@ -9,8 +7,8 @@ import threading
 agent = ErpAgent()
 
 
-# Función para correr el watcher en segundo plano
 def start_watcher():
+    print("📢 Iniciando hilo del Watcher...")
     t = threading.Thread(target=iniciar_vigilancia, daemon=True)
     t.start()
 
@@ -19,6 +17,7 @@ def start_watcher():
 def main_page():
     ui.label("ERPNext Copilot Enterprise").classes("text-2xl font-bold p-4")
 
+    # Contenedor del chat
     chat_container = ui.column().classes(
         "w-full h-96 border p-4 overflow-y-auto bg-slate-50"
     )
@@ -35,24 +34,46 @@ def main_page():
             return
 
         input_txt.value = ""
+
+        # 1. Mostrar mensaje del usuario
         with chat_container:
             ui.chat_message(pregunta, sent=True)
-            spin = ui.spinner(size="md")
+            # Creamos un contenedor para el "Pensando..."
+            thinking_indicator = ui.column()
+            with thinking_indicator:
+                ui.spinner(size="md")
+                ui.label("Consultando ERPNext...").classes("text-xs italic")
 
-        # Ejecución asíncrona para no bloquear la UI
-        response = await run.io_bound(agent.consultar, pregunta)
+        try:
+            # 2. Consultar al agente
+            # Usamos str(response) porque chat_engine devuelve un objeto Response
+            response = await run.io_bound(agent.consultar, pregunta)
 
-        chat_container.remove(spin)
-        with chat_container:
-            ui.chat_message(str(response), name="Copiloto", bg_color="indigo-1")
+            # 3. Quitar el indicador de carga (sin usar .children)
+            thinking_indicator.delete()
 
-        # Auto-scroll al final
+            # 4. Mostrar respuesta con clases de CSS en lugar de argumentos de fondo
+            with chat_container:
+                ui.chat_message(str(response), name="Copiloto").classes(
+                    "bg-indigo-100 p-2 rounded-lg"
+                )
+
+        except Exception as e:
+            print(f"Error en envío: {e}")
+            try:
+                thinking_indicator.delete()
+            except:
+                pass
+            ui.notify(f"Error de conexión: {e}", type="negative")
+
+        # Scroll al final
         chat_container.run_method("scrollTo", 0, 10000)
 
     btn_enviar.on_click(enviar)
     input_txt.on("keydown.enter", enviar)
 
 
-# Iniciamos el watcher al arrancar la app
-ui.on_startup(start_watcher)
+# Registro del inicio
+app.on_startup(start_watcher)
+
 ui.run(title="ERP Copilot", port=8080)
