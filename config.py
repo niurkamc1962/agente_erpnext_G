@@ -19,4 +19,6 @@ class Config:
     EMBED_MODEL = "nomic-embed-text"
 
     # La base de datos vectorial también relativa a la raíz
-    STORAGE_DIR = str(BASE_DIR / "storage_vectorial")
+    # Separando los indices para los usuarios y para los tecnicos
+    STORAGE_DIR_USUARIO = str(BASE_DIR / "storage_usuario")
+    STORAGE_DIR_TECNICO = str(BASE_DIR / "storage_tecnico")

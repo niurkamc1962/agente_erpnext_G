@@ -21,26 +21,23 @@ Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
 
 
 class ErpAgent:
-    def __init__(self):
-        # 1. Cargamos el índice (el cerebro con el conocimiento de ERPNext)
-        self.index = obtener_o_crear_indice()
 
-        # 2. Definimos la personalidad del Consultor
-        self.system_prompt = (
-            "Eres un Consultor Funcional de ERPNext experto en procesos de negocio.\n"
-            "Tu objetivo es guiar a un usuario final que NO sabe programar.\n\n"
-            "REGLAS CRÍTICAS:\n"
-            "1. PROHIBIDO mencionar nombres de archivos (.json, .py) o rutas de carpetas.\n"
-            "2. PROHIBIDO mostrar fragmentos de código o lógica de programación.\n"
-            "3. Si lees un archivo .json, interpreta los 'labels' como nombres de campos en la pantalla.\n"
-            "   Ejemplo: Si el JSON dice 'fieldname': 'bank_name', dile al usuario 'Escribe el nombre del banco'.\n"
-            "4. Transforma la estructura técnica en pasos de navegación.\n"
-            "   Ejemplo: 'Para crear un Banco, ve al módulo de Tesorería, haz clic en Nuevo Banco y rellena los siguientes campos...'\n"
-            "5. Si no encuentras el proceso exacto, explica cómo crees que funciona basándote en los campos que ves en el sistema."
-            "RECORDATORIO FINAL: Habla ÚNICAMENTE de la interfaz de usuario. Si mencionas archivos .py o la carpeta /apps, fallarás en tu misión."
-        )
+    def __init__(self, modo="usuario"):  # Añadimos el modo
+        # Cargamos SOLO el índice que corresponde al modo
+        self.index = obtener_o_crear_indice(tipo=modo)
 
-        # 3. Configuramos el motor de chat en modo 'context'
+        if modo == "usuario":
+            self.system_prompt = (
+                "Eres un Consultor Funcional amable. Solo hablas de la interfaz de ERPNext.\n"
+                "Tu conocimiento proviene de manuales de usuario. Si no sabes algo, no inventes código."
+            )
+        else:
+            self.system_prompt = (
+                "Eres un Desarrollador Senior de Frappe. Responde con detalles técnicos, "
+                "menciona archivos .py y estructuras JSON."
+            )
+
+        # Configuramos el motor de chat en modo 'context'
         # para que busque automáticamente en la base vectorial.
         self.chat_engine = self.index.as_chat_engine(
             chat_mode="context",

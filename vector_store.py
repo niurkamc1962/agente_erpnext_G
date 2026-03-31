@@ -15,71 +15,83 @@ from config import Config
 Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
 
 
-def obtener_o_crear_indice():
-    """Carga el índice existente o devuelve uno nuevo."""
-    if os.path.exists(Config.STORAGE_DIR) and os.listdir(Config.STORAGE_DIR):
-        storage_context = StorageContext.from_defaults(persist_dir=Config.STORAGE_DIR)
+def obtener_o_crear_indice(tipo="usuario"):
+    """Carga el índice específico: 'usuario' o 'tecnico'."""
+    path = (
+        Config.STORAGE_DIR_USUARIO if tipo == "usuario" else Config.STORAGE_DIR_TECNICO
+    )
+
+    if os.path.exists(path) and os.listdir(path):
+        storage_context = StorageContext.from_defaults(persist_dir=path)
         return load_index_from_storage(storage_context)
 
+    # Si no existe, devuelve un índice vacío para empezar
     return VectorStoreIndex.from_documents([])
 
 
 def cargar_todo_el_conocimiento():
-    """Indexa código y manuales desde las carpetas configuradas."""
-    documentos_totales = []
+    """Crea los dos cerebros por separado."""
 
-    # 1. Indexar Código/JSON
+    # --- CEREBRO USUARIO (Manuales Multiformato) ---
+    if Config.DOCS_PATH.exists():
+        print(f"📚 Indexando manuales en {Config.DOCS_PATH}...")
+        reader_docs = SimpleDirectoryReader(
+            input_dir=str(Config.DOCS_PATH),
+            recursive=True,
+            # Añadimos .docx y .pdf a la lista
+            required_exts=[".md", ".pdf", ".txt", ".docx"],
+        )
+        # LlamaIndex detectará automáticamente que es un PDF o DOCX
+        # y usará el "parser" adecuado.
+        docs_usuario = reader_docs.load_data()
+        index_user = VectorStoreIndex.from_documents(docs_usuario)
+        index_user.storage_context.persist(persist_dir=Config.STORAGE_DIR_USUARIO)
+        print("✅ Índice de Usuario (Multiformato) guardado.")
+
+    # --- 2. CEREBRO TÉCNICO (Solo código) ---
     if Config.BENCH_PATH.exists():
-        print(f"🔍 Indexando código en {Config.BENCH_PATH}...")
+        print(f"💻 Creando Índice TÉCNICO en {Config.BENCH_PATH}...")
         reader_apps = SimpleDirectoryReader(
             input_dir=str(Config.BENCH_PATH),
             recursive=True,
             required_exts=[".py", ".json"],
         )
-        documentos_totales.extend(reader_apps.load_data())
-
-    # 2. Indexar Manuales (.md, .txt, .pdf)
-    if hasattr(Config, "DOCS_PATH") and Config.DOCS_PATH.exists():
-        print(f"🔍 Indexando manuales en {Config.DOCS_PATH}...")
-        reader_docs = SimpleDirectoryReader(
-            input_dir=str(Config.DOCS_PATH),
-            recursive=True,
-            required_exts=[".md", ".pdf", ".txt"],
-        )
-        documentos_totales.extend(reader_docs.load_data())
-
-    if not documentos_totales:
-        print("⚠️ No se encontraron archivos para indexar.")
-        return None
-
-    # Crear el índice unificado usando el embed_model definido en Settings
-    index = VectorStoreIndex.from_documents(documentos_totales)
-    index.storage_context.persist(persist_dir=Config.STORAGE_DIR)
-    print(f"✅ Memoria inicial creada: {len(documentos_totales)} archivos procesados.")
-    return index
+        docs_tech = reader_apps.load_data()
+        index_tech = VectorStoreIndex.from_documents(docs_tech)
+        index_tech.storage_context.persist(persist_dir=Config.STORAGE_DIR_TECNICO)
+        print("✅ Índice Técnico guardado.")
 
 
-def actualizar_documento_en_indice(file_path):
-    """Actualización en tiempo real para el Watcher."""
+def actualizar_documento_en_indice(file_path, tipo="usuario"):
+    """Actualización mejorada para soportar archivos binarios (PDF/DOCX)."""
     try:
-        index = obtener_o_crear_indice()
-        with open(file_path, "r", encoding="utf-8") as f:
-            text = f.read()
-
-        doc = Document(
-            text=text,
-            doc_id=file_path,
-            extra_info={"file_path": file_path},
+        index = obtener_o_crear_indice(tipo=tipo)
+        persist_path = (
+            Config.STORAGE_DIR_USUARIO
+            if tipo == "usuario"
+            else Config.STORAGE_DIR_TECNICO
         )
 
-        # Borrar referencia vieja y refrescar
+        # --- CAMBIO CRÍTICO AQUÍ ---
+        # En lugar de f.read(), usamos el Reader de LlamaIndex que sabe leer binarios
+        reader = SimpleDirectoryReader(input_files=[file_path])
+        docs = (
+            reader.load_data()
+        )  # Esto devuelve una lista de Documentos (páginas en caso de PDF)
+
+        # Borrar referencia vieja
         try:
             index.delete_ref_doc(file_path, delete_from_storage=True)
         except:
             pass
 
-        index.insert(doc)
-        index.storage_context.persist(persist_dir=Config.STORAGE_DIR)
-        print(f"🚀 Actualizado: {file_path}")
+        # Insertamos los nuevos documentos (si el PDF tiene 10 páginas, insertará las 10)
+        for doc in docs:
+            doc.doc_id = file_path  # Mantenemos el ID para futuras actualizaciones
+            index.insert(doc)
+
+        index.storage_context.persist(persist_dir=persist_path)
+        print(f"🚀 [Índice {tipo.upper()}] Actualizado: {file_path}")
+
     except Exception as e:
         print(f"❌ Error actualizando {file_path}: {e}")

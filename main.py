@@ -2,6 +2,7 @@ from nicegui import app, ui, run
 from agent import ErpAgent
 from watcher import iniciar_vigilancia
 import threading
+from fastapi import Request
 
 # Inicializamos el agente
 agent = ErpAgent()
@@ -11,6 +12,17 @@ def start_watcher():
     print("📢 Iniciando hilo del Watcher...")
     t = threading.Thread(target=iniciar_vigilancia, daemon=True)
     t.start()
+
+
+# Añadiendo este endpoint  para crear el chat dentro del erpnext
+@app.post("/consultar")
+async def api_consultar(request: Request):
+    data = await request.json()
+    pregunta = data.get("pregunta")
+    # Usamos tu clase ErpAgent para obtener la respuesta
+    # Nota: Asegúrate de que el agente esté inicializado en modo "usuario"
+    respuesta = agent.consultar(pregunta)
+    return {"respuesta": str(respuesta)}
 
 
 @ui.page("/")

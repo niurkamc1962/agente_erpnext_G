@@ -13,26 +13,25 @@ class ErpSourceHandler(FileSystemEventHandler):
             return
 
         # Filtramos por las extensiones que nos interesan
-        if event.src_path.endswith((".json", ".py", ".md", ".pdf", ".txt")):
-            print(f"🔄 Cambio detectado en: {event.src_path}")
-            # Llamamos a nuestra función de actualización inteligente
-            actualizar_documento_en_indice(event.src_path)
+        file_path = event.src_path
+        # Añadimos .docx y .pdf al filtro de usuario
+        if file_path.endswith((".md", ".pdf", ".txt", ".docx")):
+            actualizar_documento_en_indice(file_path, tipo="usuario")
 
 
 def iniciar_vigilancia():
     event_handler = ErpSourceHandler()
     observer = Observer()
 
-    # Solo programamos si las rutas existen
+    # Vigilamos la carpeta de apps (Código)
     if Config.BENCH_PATH.exists():
         observer.schedule(event_handler, str(Config.BENCH_PATH), recursive=True)
-    else:
-        print(f"⚠️ ADVERTENCIA: No se encontró la ruta de apps: {Config.BENCH_PATH}")
+        print(f"👀 Vigilando Código en: {Config.BENCH_PATH}")
 
+    # Vigilamos la carpeta de documentos (Manuales)
     if Config.DOCS_PATH.exists():
         observer.schedule(event_handler, str(Config.DOCS_PATH), recursive=True)
-    else:
-        print(f"⚠️ ADVERTENCIA: No se encontró la ruta de docs: {Config.DOCS_PATH}")
+        print(f"👀 Vigilando Manuales en: {Config.DOCS_PATH}")
 
     # Solo iniciamos si hay algo que observar
     try:
